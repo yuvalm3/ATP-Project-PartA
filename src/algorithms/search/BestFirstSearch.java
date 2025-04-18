@@ -7,6 +7,9 @@ public class BestFirstSearch extends ASearchingAlgorithm {
 
     @Override
     public Solution solve(ISearchable domain) {
+        if (domain == null)
+            throw new IllegalArgumentException("Input domain is null");
+
         numberOfNodesEvaluated = 0;
         PriorityQueue<AState> openQueue = new PriorityQueue<>(new Comparator<AState>() {
             @Override

@@ -2,7 +2,7 @@ package algorithms.search;
 
 import algorithms.mazeGenerators.Maze;
 import algorithms.mazeGenerators.Position;
-import algorithms.mazeGenerators.MazeState;
+//import algorithms.mazeGenerators.MazeState;
 import java.util.ArrayList;
 
 public class SearchableMaze implements ISearchable {
