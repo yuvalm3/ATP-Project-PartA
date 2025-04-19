@@ -1,61 +1,118 @@
 package algorithms.maze3D;
 
-import java.util.*;
+import java.util.BitSet;
+import java.util.SplittableRandom;
 
+/** 3‑D maze generator – iterative back‑tracker, BitSet packed, tuned for speed */
 public class MyMaze3DGenerator extends AMaze3DGenerator {
-    private final Random rand = new Random();
+    private static final SplittableRandom RNG = new SplittableRandom();
 
+    /* 6 neighbour directions (Δd,Δr,Δc) */
+    private static final int[][] DIR = {
+            {-1,0,0}, {1,0,0},
+            {0,-1,0}, {0,1,0},
+            {0,0,-1}, {0,0,1}
+    };
+
+    /* ---------- public API ---------- */
     @Override
-    public Maze3D generate(int depth, int rows, int columns) {
-        // expand logical grid into cells+walls
-        int D = depth*2+1, R = rows*2+1, C = columns*2+1;
-        int[][][] map = new int[D][R][C];
-        for (int d=0; d<D; d++)
-            for (int r=0; r<R; r++)
-                Arrays.fill(map[d][r], 1);  // fill all walls
+    public Maze3D generate(int depth, int rows, int cols) {
+        if (depth<=0 || rows<=0 || cols<=0)
+            throw new IllegalArgumentException("positive dimensions required");
 
-        boolean[][][] visited = new boolean[depth][rows][columns];
-        List<int[]> walls = new ArrayList<>();
+        /* expanded grid sizes */
+        int D = depth*2 + 1;
+        int R = rows *2 + 1;
+        int C = cols *2 + 1;
+        int totalBits = D * R * C;
 
-        // choose random starting cell
-        int sd = rand.nextInt(depth), sr = rand.nextInt(rows), sc = rand.nextInt(columns);
-        map[sd*2+1][sr*2+1][sc*2+1] = 0;
-        visited[sd][sr][sc] = true;
-        addWalls(sd, sr, sc, depth, rows, columns, walls, visited);
+        /* BitSet map : 1 = wall */
+        BitSet map = new BitSet(totalBits);
+        map.set(0, totalBits);
 
-        // carve passages until walls list is empty
-        while (!walls.isEmpty()) {
-            int[] w = walls.remove(rand.nextInt(walls.size()));
-            int d1=w[0],r1=w[1],c1=w[2], d2=w[3],r2=w[4],c2=w[5];
-            if (visited[d1][r1][c1] ^ visited[d2][r2][c2]) {
-                // remove wall between
-                map[d1+d2+1][r1+r2+1][c1+c2+1] = 0;
-                // move into unvisited cell
-                int nd = visited[d1][r1][c1] ? d2 : d1;
-                int nr = visited[d1][r1][c1] ? r2 : r1;
-                int nc = visited[d1][r1][c1] ? c2 : c1;
-                map[nd*2+1][nr*2+1][nc*2+1] = 0;
-                visited[nd][nr][nc] = true;
-                addWalls(nd, nr, nc, depth, rows, columns, walls, visited);
+        /* carve all logical cell centres (set bit = 0) */
+        for (int d=0; d<depth; d++)
+            for (int r=0; r<rows; r++)
+                for (int c=0; c<cols; c++)
+                    map.clear(flatIndex(d*2+1, r*2+1, c*2+1, R, C));
+
+        /* visited BitSet for logical cells */
+        BitSet visited = new BitSet(depth*rows*cols);
+
+        /* iterative DFS stack : flat int array, 3 ints per entry */
+        int[] stack = new int[depth*rows*cols*3];
+        int top = 0; // points to next free slot
+
+        /* push random start cell */
+        int sd = RNG.nextInt(depth),
+                sr = RNG.nextInt(rows),
+                sc = RNG.nextInt(cols);
+        push(stack, sd, sr, sc, top);  top += 3;
+        visited.set(cellId(sd,sr,sc, rows,cols));
+
+        /* neighbour buffer (max 6 neighbours × 3 ints) */
+        int[] buf = new int[18];
+
+        /* ----- main loop ----- */
+        while (top > 0) {
+            /* pop current cell */
+            int cc = stack[--top];
+            int cr = stack[--top];
+            int cd = stack[--top];
+
+            /* collect unvisited neighbours */
+            int nCnt = 0;
+            for (int[] d : DIR) {
+                int nd = cd+d[0], nr = cr+d[1], nc = cc+d[2];
+                if (nd>=0&&nd<depth && nr>=0&&nr<rows && nc>=0&&nc<cols &&
+                        !visited.get(cellId(nd,nr,nc, rows,cols))) {
+                    buf[nCnt*3]   = nd;
+                    buf[nCnt*3+1] = nr;
+                    buf[nCnt*3+2] = nc;
+                    nCnt++;
+                }
             }
+            if (nCnt == 0) continue;              // dead end
+
+            /* push current back (branch point) */
+            push(stack, cd, cr, cc, top);  top += 3;
+
+            /* choose random neighbour */
+            int pick = RNG.nextInt(nCnt);
+            int nd = buf[pick*3],
+                    nr = buf[pick*3+1],
+                    nc = buf[pick*3+2];
+
+            /* carve wall between current ↔ neighbour */
+            map.clear(flatIndex(cd+nd+1, cr+nr+1, cc+nc+1, R, C));
+
+            /* mark & push neighbour */
+            visited.set(cellId(nd,nr,nc, rows,cols));
+            push(stack, nd, nr, nc, top);  top += 3;
         }
 
-        Position3D start = new Position3D(1,1,1);
-        Position3D goal  = new Position3D(D-2,R-2,C-2);
-        map[goal.getDepthIndex()][goal.getRowIndex()][goal.getColumnIndex()] = 0;
-        return new Maze3D(map, start, goal);
+        /* start & goal */
+        map.clear(flatIndex(1,1,1, R,C));
+        map.clear(flatIndex(D-2, R-2, C-2, R,C));
+
+        return new Maze3D(depth, rows, cols, map,
+                new Position3D(1,1,1),
+                new Position3D(D-2, R-2, C-2));
     }
 
-    private void addWalls(int cd, int cr, int cc,
-                          int maxD, int maxR, int maxC,
-                          List<int[]> walls, boolean[][][] visited) {
-        // six directions in 3D
-        int[][] dirs = {{-1,0,0},{1,0,0},{0,-1,0},{0,1,0},{0,0,-1},{0,0,1}};
-        for (int[] dir : dirs) {
-            int nd = cd + dir[0], nr = cr + dir[1], nc = cc + dir[2];
-            if (nd>=0&&nd<maxD && nr>=0&&nr<maxR && nc>=0&&nc<maxC && !visited[nd][nr][nc]) {
-                walls.add(new int[]{cd,cr,cc, nd,nr,nc});
-            }
-        }
+    /* ---------- helpers ---------- */
+
+    private static int flatIndex(int d, int r, int c, int R, int C) {
+        return (d * R + r) * C + c;
+    }
+
+    private static int cellId(int d, int r, int c, int rows, int cols) {
+        return (d * rows + r) * cols + c;
+    }
+
+    private static void push(int[] stack, int d, int r, int c, int top) {
+        stack[top  ] = d;
+        stack[top+1] = r;
+        stack[top+2] = c;
     }
 }
