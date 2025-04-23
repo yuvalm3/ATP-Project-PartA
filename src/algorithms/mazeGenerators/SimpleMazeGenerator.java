@@ -17,7 +17,7 @@ public class SimpleMazeGenerator extends AMazeGenerator {
 
         int[][] maze = new int[rows][columns];
 
-        // Fill with 1s
+        // Fill with walls
         for (int[] row : maze) {
             java.util.Arrays.fill(row, 1);
         }

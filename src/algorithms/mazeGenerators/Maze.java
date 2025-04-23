@@ -63,7 +63,7 @@ public class Maze {
                 } else if (r == goalPosition.getRowIndex() && c == goalPosition.getColumnIndex()) {
                     System.out.print("E");
                 } else {
-                    System.out.print(mazeMatrix[r][c] == 1 ? "█" : " ");
+                    System.out.print(mazeMatrix[r][c] == 1 ? "1" : "0");
                 }
             }
             System.out.println();

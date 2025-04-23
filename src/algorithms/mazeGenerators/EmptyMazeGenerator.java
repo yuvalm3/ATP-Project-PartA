@@ -8,6 +8,7 @@ public class EmptyMazeGenerator extends AMazeGenerator {
     /**
      * Generates a maze with no walls at all.
      * All cells will be set to 0.
+     *
      * @return a Maze object representing this specific Maze.
      * @throws IllegalArgumentException if rows or columns are not positive (automatically by Java).
      */
