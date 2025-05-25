@@ -5,13 +5,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Represents a 2D maze using a grid of integers.
  * 0 is a free cell
  * 1 is a wall
  */
-public class Maze {
+public class Maze implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final int[][] mazeMatrix;
     private final Position startPosition;
     private final Position goalPosition;

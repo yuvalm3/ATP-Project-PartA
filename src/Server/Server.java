@@ -1,53 +1,94 @@
 package Server;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
- * שרת כללי עם ThreadPool שמשתמש ב־IServerStrategy לטיפול בלקוחות.
+ * General-purpose server using a fixed thread pool,
+ * delegates each client connection to the given IServerStrategy.
  */
 public class Server {
     private final int port;
     private final int threadPoolSize;
     private final IServerStrategy strategy;
+
+    private volatile boolean running = false;
     private ServerSocket serverSocket;
     private ExecutorService pool;
 
+    /**
+     * @param port           TCP port to bind
+     * @param threadPoolSize number of threads in the pool
+     * @param strategy       how to handle each client connection
+     */
     public Server(int port, int threadPoolSize, IServerStrategy strategy) {
         this.port = port;
         this.threadPoolSize = threadPoolSize;
         this.strategy = strategy;
     }
 
+    /**
+     * Starts the server: opens the socket and begins accepting clients in a daemon thread.
+     */
     public void start() {
+        try {
+            serverSocket = new ServerSocket(port);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to bind to port " + port, e);
+        }
+
         pool = Executors.newFixedThreadPool(threadPoolSize);
-        new Thread(() -> {
-            try (ServerSocket ss = new ServerSocket(port, threadPoolSize)) {
-                while (!ss.isClosed()) {
-                    Socket client = ss.accept();
-                    pool.submit(() -> {
-                        try (var in = client.getInputStream();
-                             var out = client.getOutputStream()) {
-                            strategy.apply(in, out);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
+        running = true;
+
+        Thread acceptThread = new Thread(() -> {
+            while (running && !serverSocket.isClosed()) {
+                try {
+                    Socket client = serverSocket.accept();
+                    pool.submit(() -> handleClient(client));
+                } catch (IOException e) {
+                    if (running) {
+                        e.printStackTrace();
+                    }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-        }).start();
+        });
+
+        acceptThread.setDaemon(true);
+        acceptThread.start();
     }
 
+    /**
+     * Handles a single accepted client socket.
+     */
+    private void handleClient(Socket client) {
+        try (Socket s = client;
+             InputStream in = s.getInputStream();
+             OutputStream out = s.getOutputStream()) {
+            strategy.applyStrategy(in, out);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Stops the server: shuts down accept loop and thread pool.
+     */
     public void stop() {
+        running = false;
         try {
-            if (serverSocket != null) serverSocket.close();
+            if (serverSocket != null) {
+                serverSocket.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        if (pool != null) pool.shutdown();
+        if (pool != null) {
+            pool.shutdown();
+        }
     }
 }

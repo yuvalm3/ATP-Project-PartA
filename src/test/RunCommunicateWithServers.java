@@ -60,8 +60,8 @@ public class RunCommunicateWithServers {
                                         fromServer.readObject(); //read generated maze (compressed with MyCompressor) from server
                                 InputStream is = new MyDecompressorInputStream(new
                                         ByteArrayInputStream(compressedMaze));
-                                byte[] decompressedMaze = new byte[1000 /*CHANGE
-SIZE ACCORDING TO YOUR MAZE SIZE*/]; //allocating byte[] for the decompressed maze -
+                                byte[] decompressedMaze = new byte[24 + 50*50];
+                                ; //allocating byte[] for the decompressed maze -
                                         is.read(decompressedMaze); //Fill decompressedMaze with bytes
                                 Maze maze = new Maze(decompressedMaze);
                                 maze.print();
