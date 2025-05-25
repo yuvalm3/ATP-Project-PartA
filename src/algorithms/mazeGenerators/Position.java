@@ -1,10 +1,13 @@
 package algorithms.mazeGenerators;
 
+import java.io.Serializable;
+
 /**
  * Represents a position in a 2D maze using row and column indices.
  * Used for defining the start and goal Positions.
  */
-public class Position {
+public class Position implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final int row;
     private final int column;
 

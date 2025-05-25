@@ -37,11 +37,25 @@ public class MyCompressorOutputStream extends OutputStream {
 
     @Override
     public void close() throws IOException {
+        flush();
+        out.close();
+    }
+
+
+    @Override
+    public void flush() throws IOException {
+        // 1) אם יש רצף שבערימה, כותבים אותו
         if (count > 0) {
             out.write(count);
             out.write(lastByte);
+            count = 0;
+            lastByte = -1;
         }
-        out.close();
+        // 2) מעבירים ל-underlying stream
+        out.flush();
     }
+
+
+
 }
 

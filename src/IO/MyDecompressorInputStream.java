@@ -26,4 +26,9 @@ public class MyDecompressorInputStream extends InputStream {
         remaining--;
         return currentValue;
     }
+
+    @Override
+    public void close() throws IOException {
+        in.close();
+    }
 }
