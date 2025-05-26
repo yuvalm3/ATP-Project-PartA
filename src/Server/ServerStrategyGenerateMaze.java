@@ -25,6 +25,7 @@ public class ServerStrategyGenerateMaze implements IServerStrategy {
 
         ObjectInputStream ois = new ObjectInputStream(inFromClient);
         int[] dims = (int[]) ois.readObject();
+        System.out.println("Dimensions received: " + dims[0] + "x" + dims[1]);
         int rows = dims[0], cols = dims[1];
 
         // Create maze + compress
@@ -47,5 +48,6 @@ public class ServerStrategyGenerateMaze implements IServerStrategy {
         // send back in the same OOS
         oos.writeObject(compressed);
         oos.flush();
+        System.out.println("Maze sent to client.");
     }
 }

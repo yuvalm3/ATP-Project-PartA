@@ -19,12 +19,13 @@ public class ServerStrategySolveSearchProblem implements IServerStrategy {
         // first send header_server
         ObjectOutputStream oos = new ObjectOutputStream(outToClient);
         oos.flush();
+        System.out.println("[INFO] Solver server accepted client");
 
-        // read maze
+        // read maze from client
         ObjectInputStream ois = new ObjectInputStream(inFromClient);
         Maze maze = (Maze) ois.readObject();
 
-        // build cache path
+        // build cache path based on maze uniqueness
         byte[] mazeBytes = maze.toByteArray();
         int hash = Arrays.hashCode(mazeBytes);
         String tmpDir = System.getProperty("java.io.tmpdir");
@@ -32,28 +33,32 @@ public class ServerStrategySolveSearchProblem implements IServerStrategy {
 
         Solution sol;
         if (cacheFile.exists()) {
-            try (ObjectInputStream fin =
-                         new ObjectInputStream(new FileInputStream(cacheFile))) {
+            // load existing solution
+            try (ObjectInputStream fin = new ObjectInputStream(new FileInputStream(cacheFile))) {
                 sol = (Solution) fin.readObject();
             }
         } else {
-            String searchAlg = Configurations.getInstance()
-                    .getProperty("mazeSearchingAlgorithm");
+            // solve and cache
+            String searchAlg = Configurations.getInstance().getProperty("mazeSearchingAlgorithm");
             @SuppressWarnings("unchecked")
             Class<? extends ISearchingAlgorithm> clazz =
                     (Class<? extends ISearchingAlgorithm>) Class
                             .forName("algorithms.search." + searchAlg);
             ISearchingAlgorithm searcher = clazz.getDeclaredConstructor().newInstance();
-            sol = searcher.solve(new SearchableMaze(maze));
 
-            try (ObjectOutputStream fout =
-                         new ObjectOutputStream(new FileOutputStream(cacheFile))) {
+            long startTime = System.currentTimeMillis();
+            sol = searcher.solve(new SearchableMaze(maze));
+            long duration = System.currentTimeMillis() - startTime;
+            System.out.println("Maze solved in " + duration + " ms");
+
+            try (ObjectOutputStream fout = new ObjectOutputStream(new FileOutputStream(cacheFile))) {
                 fout.writeObject(sol);
             }
         }
 
-        // send solution
+        // send solution to client
         oos.writeObject(sol);
         oos.flush();
+        System.out.println("Solution sent to client.");
     }
 }

@@ -38,6 +38,7 @@ public class Server {
     public void start() {
         try {
             serverSocket = new ServerSocket(port);
+            System.out.println("Server started on port " + port);
         } catch (IOException e) {
             throw new RuntimeException("Failed to bind to port " + port, e);
         }
@@ -49,6 +50,7 @@ public class Server {
             while (running && !serverSocket.isClosed()) {
                 try {
                     Socket client = serverSocket.accept();
+                    System.out.println("[INFO] Client accepted: " + client);
                     pool.submit(() -> handleClient(client));
                 } catch (IOException e) {
                     if (running) {
