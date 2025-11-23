@@ -1,4 +1,4 @@
-***This repo contains parts A+B in src file**
+***This repo contains parts A+B in src folder**
 
 
 Overview
