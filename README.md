@@ -1,4 +1,4 @@
-***This repo contains parts A+B  of Football & Java project in src folder**
+**This repo contains parts A+B  of Football & Java project in src folder**
 
 
 Overview
