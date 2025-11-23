@@ -1,3 +1,6 @@
+***This repo contains parts A+B in src file**
+
+
 Overview
 
 ATP Project is a multi-part Java assignment that implements a full maze platform: generating 2D and 3D mazes, solving them with classic search algorithms,
